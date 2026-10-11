@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f5f7f5">
+  <meta name="description" content="An aggregated spatial atlas of income and age segregation across physical and online visitation in five Chinese cities.">
+  <title>Inclusive Cities · Across Physical and Digital Spaces</title>
+  <link rel="stylesheet" href="vendor/leaflet.css">
+  <link rel="stylesheet" href="vendor/mapbox-gl.css">
+  <link rel="stylesheet" href="atlas.css?v=20261011-five-city-8class">
+</head>
+<body>
+  <h1 class="sr-only">Inclusive Cities across physical and digital spaces</h1>
+  <main id="map-grid" class="map-grid" aria-label="Spatial atlas">
+    <section class="map-panel" aria-label="Online map">
+      <div id="map-online" class="map" aria-label="Online visitation map"></div>
+      <aside id="online-stat" class="map-stat glass" aria-label="Online city mean">
+        <span id="online-title" class="view-name">Online visitation</span>
+        <span id="online-stat-label" class="stat-label">ONLINE · MEAN SEGREGATION</span>
+        <strong id="online-mean">—</strong>
+      </aside>
+    </section>
+    <section id="offline-panel" class="map-panel" aria-label="Offline map">
+      <div id="map-offline" class="map" aria-label="Offline visiting map"></div>
+      <aside id="offline-stat" class="map-stat glass" aria-label="Offline city mean">
+        <span class="view-name">Offline visiting</span>
+        <span id="offline-stat-label" class="stat-label">CITY MEAN · OFFLINE</span>
+        <strong id="offline-mean">—</strong>
+      </aside>
+    </section>
+  </main>
+  <header class="floating-nav glass">
+    <div class="wordmark">
+      <div class="brand-line"><span class="brand-main"><span class="brand-inclusive" aria-hidden="true"><span>I</span><span>n</span><span>c</span><span>l</span><span>u</span><span>s</span><span>i</span><span>v</span><span>e</span></span><span aria-hidden="true"> Cities</span><span class="sr-only">Inclusive Cities</span></span><span class="brand-tagline">across physical and digital spaces</span></div>
+    </div>
+    <label class="city-picker"><span class="sr-only">City</span><select id="city" disabled><option>Shanghai</option></select></label>
+    <div class="nav-separator" aria-hidden="true"></div>
+    <div class="segmented" role="group" aria-label="Population attribute">
+      <button data-profile="income" aria-pressed="true">Income</button>
+      <button data-profile="age" aria-pressed="false">Age</button>
+    </div>
+    <label class="city-picker measure-picker"><span class="sr-only">Visualization</span><select id="measure"><option value="segregation">Paired segregation</option><option value="bivariate">Bivariate segregation</option><option value="distance">Composition difference</option></select></label>
+    <div class="transparency-control">
+      <label for="transparency"><span>Transparency</span><output id="transparency-value" for="transparency">27%</output></label>
+      <input id="transparency" type="range" min="0" max="100" step="1" value="27" aria-label="Grid transparency" aria-valuetext="27% transparent" title="Grid transparency: 0% fully visible, 100% hidden">
+    </div>
+    <div class="nav-actions">
+      <button id="fit" class="icon-button" aria-label="Recenter maps" title="Recenter maps"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>
+      <button id="about-open" class="text-button">About <span aria-hidden="true">↗</span></button>
+    </div>
+  </header>
+  <div id="status" class="status-pill glass" role="status">Loading atlas…</div>
+  <div id="error" class="error glass" role="alert" hidden></div>
+  <aside id="univariate-legend" class="legend glass" aria-label="Map color legend">
+    <div class="legend-top"><strong id="legend-name">City-relative segregation</strong><span id="legend-hint">Higher → more segregated</span></div>
+    <div class="legend-scale"><div id="legend-gradient"></div>
+    <div id="legend-values" class="legend-values"><span style="--position:0%">0</span><span style="--position:25%">0.10</span><span style="--position:50%">0.20</span><span style="--position:75%">0.30</span><span style="--position:87.5%">≥ 0.35</span></div></div>
+  </aside>
+  <aside id="bivariate-legend" class="bivariate-legend glass" aria-label="Bivariate color legend" hidden><strong id="bivariate-title">Income segregation</strong><div id="legend-matrix"></div></aside>
+  <aside id="bivariate-summary" class="bivariate-summary glass" aria-label="Bivariate city means" hidden><span class="stat-label">CITY MEANS</span><div class="bivariate-means"><span class="digital-mean"><span class="space-label">Online visitation</span><strong id="bivariate-online-mean">—</strong></span><span class="physical-mean"><span class="space-label">Offline visiting</span><strong id="bivariate-offline-mean">—</strong></span></div></aside>
+  <div id="basemap-notice" class="basemap-notice glass" role="status" hidden></div>
+  <dialog id="about-dialog" aria-labelledby="about-title">
+    <button class="close-button dialog-close" data-close="about-dialog" aria-label="Close about atlas">×</button>
+    <h2 id="about-title">Who searches, who visits?</h2>
+    <p>Across cities, how do the income and age profiles of online searchers compare with those of physical visitors to the same urban places? Do these places show segregation or mixing across income and age groups?</p>
+    <div class="about-facts"><span><strong id="city-count">5</strong>Cities</span><span><strong>300 m</strong>Aggregate grid</span></div>
+    <p><b>Segregation</b> measures how the shares of visitation by different income or age groups in a grid cell differ from those groups’ shares in the city as a whole. Each city baseline is calculated separately for online and physical visitation.</p>
+    <p><b>Composition difference</b> measures how much the income- or age-group shares of online visitation differ from those of physical visitation within the same grid cell.</p>
+    <details>
+      <summary>Calculation</summary>
+      <div class="formula">
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" aria-label="Segregation equals the sum of absolute differences between cell and city group shares, divided by twice one minus the smallest city group share.">
+          <mrow>
+            <msubsup><mi>S</mi><mi>i</mi><mi>m</mi></msubsup><mo>=</mo>
+            <mfrac>
+              <mrow>
+                <munderover><mo>∑</mo><mrow><mi>g</mi><mo>=</mo><mn>1</mn></mrow><mi>G</mi></munderover>
+                <mo stretchy="true">|</mo><msubsup><mi>p</mi><mrow><mi>i</mi><mi>g</mi></mrow><mi>m</mi></msubsup><mo>−</mo><msubsup><mi>π</mi><mi>g</mi><mi>m</mi></msubsup><mo stretchy="true">|</mo>
+              </mrow>
+              <mrow><mn>2</mn><mo stretchy="true">(</mo><mn>1</mn><mo>−</mo><munder><mo>min</mo><mi>g</mi></munder><msubsup><mi>π</mi><mi>g</mi><mi>m</mi></msubsup><mo stretchy="true">)</mo></mrow>
+            </mfrac>
+          </mrow>
+        </math>
+      </div>
+      <div class="formula">
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" aria-label="Composition difference equals the square root of half the sum of squared differences between online and physical group shares in the same cell.">
+          <mrow>
+            <msub><mi>D</mi><mi>i</mi></msub><mo>=</mo>
+            <msqrt><mrow>
+              <mfrac><mn>1</mn><mn>2</mn></mfrac>
+              <munderover><mo>∑</mo><mrow><mi>g</mi><mo>=</mo><mn>1</mn></mrow><mi>G</mi></munderover>
+              <msup><mrow><mo stretchy="true">(</mo><msubsup><mi>p</mi><mrow><mi>i</mi><mi>g</mi></mrow><mtext>on</mtext></msubsup><mo>−</mo><msubsup><mi>p</mi><mrow><mi>i</mi><mi>g</mi></mrow><mtext>off</mtext></msubsup><mo stretchy="true">)</mo></mrow><mn>2</mn></msup>
+            </mrow></msqrt>
+          </mrow>
+        </math>
+      </div>
+      <p><i>p</i><sub>ig</sub><sup>m</sup> is group <i>g</i>’s share of visitation in cell <i>i</i>; <i>π</i><sub>g</sub><sup>m</sup> is its city-wide share. Space <i>m</i> is online (on) or physical (off). <i>G</i> = 5 for income and 7 for age. Both indices range from 0 to 1.</p>
+    </details>
+    <details>
+      <summary>Data &amp; map guide</summary>
+      <p>All place categories and observations are pooled into 300 m cells before the indices are calculated. A cell requires at least 50 cumulative valid activity units per space and attribute; these totals are not counts of distinct people. Comparisons between spaces require both to be eligible.</p>
+      <p>Single-variable maps use eight shared color classes, with breaks every 0.05 and the highest class covering values ≥ 0.35. In the bivariate view, blue means higher online segregation, red higher physical segregation, purple both high, and pale both low. For each attribute, both axes and all cities share the same quintile thresholds.</p>
+      <p>City means are unweighted across cells. Paired views use each space’s eligible cells; bivariate means and composition difference use cells eligible in both spaces.</p>
+    </details>
+  </dialog>
+  <script src="vendor/leaflet.js"></script>
+  <script src="vendor/mapbox-gl.js"></script>
+  <script src="mapbox-config.js?v=20261011-five-city-8class"></script>
+  <script src="atlas.js?v=20261011-five-city-8class"></script>
+</body>
+</html>
